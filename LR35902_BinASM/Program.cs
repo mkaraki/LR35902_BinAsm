@@ -22,7 +22,7 @@ List<byte> instr = new();
 while (true)
 {
     if (str_instr.Length < 2) break;
-    if (str_instr[0] == ' ' || str_instr[0] == ',') str_instr = str_instr.Substring(1);
+    if (str_instr[0] == ' ' || str_instr[0] == ',' || str_instr[0] == '\t') str_instr = str_instr.Substring(1);
     string two_dig_hex = str_instr.Substring(0, 2);
     instr.Add((byte)Convert.ToInt16(two_dig_hex, 16));
     str_instr = str_instr.Substring(2);
