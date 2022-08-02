@@ -26,7 +26,6 @@ namespace LR35902_BinASM
             Register2 = reg2;
         }
 
-
         public AsmInstr(Instruction instruction, UInt16 operand) : this(instruction)
         { 
             Operand = operand;

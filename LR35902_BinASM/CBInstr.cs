@@ -72,8 +72,7 @@ namespace LR35902_BinASM
             if (Amount != null)
                 ret += "\t " + Amount;
 
-            if (Register != null)
-                ret += "\t " + Register.ToString();
+            ret += "\t " + Register.ToString();
 
             return ret;
         }
