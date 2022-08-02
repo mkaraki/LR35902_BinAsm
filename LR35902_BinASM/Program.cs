@@ -10,14 +10,17 @@ using Convert = System.Convert;
 bool boot_help = false;
 string cnf_profile = "hw-gb";
 bool cnf_continuous = false;
-uint cnf_counter_start_addr = 0;
+ushort cnf_counter_start_addr = 0;
+
+ushort cnf_start_addr = 0x0;
 
 OptionSet opts = new OptionSet()
 {
     { "h|help", "Show this help", v => boot_help = v != null },
     { "p|profile=", "Mapping Profile", v => cnf_profile = v },
     { "c|continuous", "Continue after saw `RET`", v => cnf_continuous = v != null },
-    { "a|start-address=", "Start address for address counter in hex (like DA00)", v => cnf_counter_start_addr = uint.Parse(v, System.Globalization.NumberStyles.HexNumber) },
+    { "a|start-address=", "Start address for address counter in hex (like DA00)", v => cnf_counter_start_addr = ushort.Parse(v, System.Globalization.NumberStyles.HexNumber) },
+    { "f|from=", "Convert start address", v => cnf_start_addr = ushort.Parse(v, System.Globalization.NumberStyles.HexNumber) },
 };
 args = opts.Parse(args).ToArray();
 
@@ -34,11 +37,12 @@ if (boot_help)
 
 // ===== MAIN PROGRAM
 
-Console.Write("Opcodes (hex) > ");
+MapSearch map = new();
 
 string str_instr = string.Empty;
 
-MapSearch map = new();
+Console.Write("Opcodes (hex) > ");
+
 
 while (true)
 {
@@ -48,6 +52,8 @@ while (true)
         break;
 
     str_instr += str.Trim();
+
+    Console.Write("> ");
 }
 
 if (str_instr.Length < 2)
@@ -65,15 +71,18 @@ while (true)
         str_instr = str_instr.Substring(1);
         continue;
     }
-    string two_dig_hex = str_instr.Substring(0, 2);
-    instr.Add((byte)Convert.ToInt16(two_dig_hex, 16));
+    string two_dig_hex = str_instr.Trim().Substring(0, 2);
+    instr.Add((byte)Convert.ToInt16(two_dig_hex.Trim(), 16));
     str_instr = str_instr.Substring(2);
 }
 
 Instruction[] memory_addr_comment_tgt = new Instruction[] { LD, JP, CALL };
 Register[] memory_addr_comment_tgt_ld_reg = new Register[] { BC, DE, HL };
 
-for (int i = 0; i < instr.Count;)
+// Enter new line for pipe input
+Console.WriteLine();
+
+for (int i = (short)(cnf_start_addr - cnf_counter_start_addr); i < instr.Count;)
 {
     var asmi = AsmInstr.GetAsmInstr(instr.Skip(i).ToArray(), out int skip);
 
