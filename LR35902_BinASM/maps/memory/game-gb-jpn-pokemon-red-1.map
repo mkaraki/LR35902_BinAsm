@@ -1,0 +1,8 @@
+﻿C006	C00B	BGM Program Counter
+C0B6	C0B8	Time for next sound
+
+C000	C0F2	Sound System (US Edition)
+
+A000	BFFF	Save Data Area (US Edition)
+
+/=memory/hw-gb.map
