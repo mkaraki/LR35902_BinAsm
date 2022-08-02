@@ -7,15 +7,29 @@ using Convert = System.Convert;
 
 // ===== OPTIONS
 
+bool boot_help = false;
 string cnf_profile = "hw-gb";
 bool cnf_continuous = false;
+uint cnf_counter_start_addr = 0;
 
 OptionSet opts = new OptionSet()
 {
+    { "h|help", "Show this help", v => boot_help = v != null },
     { "p|profile=", "Mapping Profile", v => cnf_profile = v },
-    { "c|continuous", "Continue after saw `RET`", v => cnf_continuous = v != null }
+    { "c|continuous", "Continue after saw `RET`", v => cnf_continuous = v != null },
+    { "a|start-address=", "Start address for address counter in hex (like DA00)", v => cnf_counter_start_addr = uint.Parse(v, System.Globalization.NumberStyles.HexNumber) },
 };
 args = opts.Parse(args).ToArray();
+
+
+if (boot_help)
+{
+    Console.WriteLine("LR35902 Bin Asm Converter");
+    Console.WriteLine();
+
+    opts.WriteOptionDescriptions(Console.Out);
+    Environment.Exit(0);
+}
 
 
 // ===== MAIN PROGRAM
@@ -24,7 +38,7 @@ Console.Write("Opcodes (hex) > ");
 
 string str_instr = string.Empty;
 
-LR35902_BinASM.MapSearch map = new();
+MapSearch map = new();
 
 while (true)
 {
@@ -46,7 +60,11 @@ List<byte> instr = new();
 while (true)
 {
     if (str_instr.Length < 2) break;
-    if (str_instr[0] == ' ' || str_instr[0] == ',' || str_instr[0] == '\t') str_instr = str_instr.Substring(1);
+    if (str_instr[0] == ' ' || str_instr[0] == ',' || str_instr[0] == '\t')
+    {
+        str_instr = str_instr.Substring(1);
+        continue;
+    }
     string two_dig_hex = str_instr.Substring(0, 2);
     instr.Add((byte)Convert.ToInt16(two_dig_hex, 16));
     str_instr = str_instr.Substring(2);
@@ -58,9 +76,27 @@ Register[] memory_addr_comment_tgt_ld_reg = new Register[] { BC, DE, HL };
 for (int i = 0; i < instr.Count;)
 {
     var asmi = AsmInstr.GetAsmInstr(instr.Skip(i).ToArray(), out int skip);
-    i += skip;
 
-    Console.Write(asmi);
+    uint addrcnt = cnf_counter_start_addr + (uint)i;
+
+    Console.ForegroundColor = ConsoleColor.DarkGray;
+    Console.Write(addrcnt.ToString("X").PadLeft(4, '0') + " \t");
+    Console.ResetColor();
+
+    string[] res = asmi.ToString().Split('\n');
+    Console.Write(res[0]);
+    if (asmi.Instruction == CB)
+    {
+        Console.WriteLine();
+
+        Console.ForegroundColor = ConsoleColor.DarkGray;
+        Console.Write((addrcnt + 1).ToString("X").PadLeft(4, '0') + " \t");
+        Console.ResetColor();
+
+        Console.Write(res[1]);
+    }
+
+    i += skip;
 
     if (asmi.Instruction == RET && asmi.Equals(new AsmInstr(RET)))
     {
