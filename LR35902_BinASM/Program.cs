@@ -14,10 +14,13 @@ ushort cnf_counter_start_addr = 0;
 
 ushort cnf_start_addr = 0x0;
 
+string cnf_load_bin_file = string.Empty;
+
 OptionSet opts = new OptionSet()
 {
     { "h|help", "Show this help", v => boot_help = v != null },
-    { "p|profile=", "Mapping Profile", v => cnf_profile = v },
+    { "p|profile=", "Memory mapping profile", v => cnf_profile = v },
+    { "b|binary=", "Load binary file", v => cnf_load_bin_file = v },
     { "c|continuous", "Continue after saw `RET`", v => cnf_continuous = v != null },
     { "a|start-address=", "Start address for address counter in hex (like DA00)", v => cnf_counter_start_addr = ushort.Parse(v, System.Globalization.NumberStyles.HexNumber) },
     { "f|from=", "Convert start address", v => cnf_start_addr = ushort.Parse(v, System.Globalization.NumberStyles.HexNumber) },
@@ -39,48 +42,63 @@ if (boot_help)
 
 MapSearch map = new();
 
-string str_instr = string.Empty;
-
-Console.Write("Opcodes (hex) > ");
-
-
-while (true)
-{
-    var str = Console.ReadLine() ?? string.Empty;
-
-    if (str == string.Empty || str == "end")
-        break;
-
-    str_instr += str.Trim();
-
-    Console.Write("> ");
-}
-
-if (str_instr.Length < 2)
-{
-    Console.Error.Write("Too short Opcode");
-}
 
 List<byte> instr = new();
 
-while (true)
+if (cnf_load_bin_file == string.Empty)
 {
-    if (str_instr.Length < 2) break;
-    if (str_instr[0] == ' ' || str_instr[0] == ',' || str_instr[0] == '\t')
+    string str_instr = string.Empty;
+
+    Console.Write("Opcodes (hex) > ");
+
+    while (true)
     {
-        str_instr = str_instr.Substring(1);
-        continue;
+        var str = Console.ReadLine() ?? string.Empty;
+
+        if (str == string.Empty || str == "end")
+            break;
+
+        str_instr += str.Trim();
+
+        Console.Write("> ");
     }
-    string two_dig_hex = str_instr.Trim().Substring(0, 2);
-    instr.Add((byte)Convert.ToInt16(two_dig_hex.Trim(), 16));
-    str_instr = str_instr.Substring(2);
+
+    if (str_instr.Length < 2)
+    {
+        Console.Error.Write("Too short Opcode");
+    }
+
+    // Enter new line for pipe input
+    Console.WriteLine();
+
+
+    while (true)
+    {
+        if (str_instr.Length < 2) break;
+        if (str_instr[0] == ' ' || str_instr[0] == ',' || str_instr[0] == '\t')
+        {
+            str_instr = str_instr.Substring(1);
+            continue;
+        }
+        string two_dig_hex = str_instr.Trim().Substring(0, 2);
+        instr.Add((byte)Convert.ToInt16(two_dig_hex.Trim(), 16));
+        str_instr = str_instr.Substring(2);
+    }
 }
+else if (File.Exists(cnf_load_bin_file))
+{
+    instr = File.ReadAllBytes(cnf_load_bin_file).ToList();
+}
+else
+{
+    Console.Error.WriteLine("Unable to find file");
+    Environment.Exit(1);
+}
+
+
 
 Instruction[] memory_addr_comment_tgt = new Instruction[] { LD, JP, CALL };
 Register[] memory_addr_comment_tgt_ld_reg = new Register[] { BC, DE, HL };
-
-// Enter new line for pipe input
-Console.WriteLine();
 
 for (int i = (short)(cnf_start_addr - cnf_counter_start_addr); i < instr.Count;)
 {
