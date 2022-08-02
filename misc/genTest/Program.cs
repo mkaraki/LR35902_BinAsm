@@ -45,6 +45,7 @@ string[] av_regs = new string[] { "A", "F", "B", "C", "D", "E", "H", "L", "AF", 
 string[] av_imm = new string[] { "d8", "d16", "a8", "a16", "r8" };
 string[] av_imm16b = new string[] { "d16", "a16" };
 string[] av_jc = new string[] { "NZ", "Z", "NC", "C" };
+string[] av_jcuse = new string[] { "CALL", "JP", "JR", "RET" };
 
 using (JsonDocument opcodejson = JsonDocument.Parse(
     File.ReadAllText("opcode-json/opcodes.json", System.Text.Encoding.UTF8).Replace("\r\n", "").Replace("\n", "")
@@ -54,12 +55,12 @@ using (JsonDocument opcodejson = JsonDocument.Parse(
     {
         // TODO: CB Support
         if (i == 0xCB) continue;
- 
+
         string byte1 = "0x" + i.ToString("x").PadLeft(2, '0');
 
         if (!opcodejson.RootElement.GetProperty("unprefixed").TryGetProperty(byte1, out var opc))
             continue;
-        
+
         string optstr = "";
 
         int vskip = 1;
@@ -68,13 +69,20 @@ using (JsonDocument opcodejson = JsonDocument.Parse(
 
         string name_reg = string.Empty;
 
+        string instr = opc.GetProperty("mnemonic").GetRawText().Trim('"');
+
         for (int opi = 1; opi <= 2; opi++)
         {
             if (opc.TryGetProperty($"operand{opi}", out JsonElement op1))
             {
                 string opn = op1.GetRawText().Trim('"');
                 string opn_reg_eval = opn.TrimStart('(').TrimEnd(')');
-                if (av_regs.Contains(opn_reg_eval))
+                if (av_jcuse.Contains(instr) && av_jc.Contains(opn))
+                {
+                    optstr += $"\nJumpCondition = JC.{opn},";
+                    name_reg += $"{opn}_";
+                }
+                else if (av_regs.Contains(opn_reg_eval))
                 {
                     string src_friendly_reg_name = opn.Replace("+", "Plus").Replace("-", "Minus");
 
@@ -84,6 +92,7 @@ using (JsonDocument opcodejson = JsonDocument.Parse(
 
                     name_reg += $"{src_friendly_reg_name}_";
                 }
+
                 else if (av_imm.Contains(opn_reg_eval))
                 {
                     if (av_imm16b.Contains(opn_reg_eval))
@@ -97,20 +106,22 @@ using (JsonDocument opcodejson = JsonDocument.Parse(
                         vskip += 1;
                     }
 
-                    if (opi == 1)
+                    if (opi == 1 && opc.TryGetProperty($"operand2", out _))
                         optstr += "\nOperandFirst = true,";
 
                     name_reg += $"{opn_reg_eval}_";
-                }
-                else if (av_jc.Contains(opn))
-                {
-                    optstr += $"\nJumpCondition = JC.{opn},";
-                    name_reg += $"{opn}_";
                 }
                 else if (opn.EndsWith("H"))
                 {
                     optstr += $"\nRST = p{opn},";
                     name_reg += $"{opn}_";
+                }
+                else if (opn == "SP+r8")
+                { 
+                    optstr += $"\nOperand = {abyte_8bit},";
+                    optstr += $"\nAddSP = true,";
+                    name_reg += $"SP_PLUS_r8_";
+                    vskip += 1;
                 }
             }
         }
@@ -125,7 +136,7 @@ using (JsonDocument opcodejson = JsonDocument.Parse(
             .Replace("%BYTE1%", byte1)
             .Replace("%BYTE2%", pre_byte2)
             .Replace("%BYTE3%", pre_byte3)
-            .Replace("%VALID_INSTR%", opc.GetProperty("mnemonic").GetRawText().Trim('"'))
+            .Replace("%VALID_INSTR%", instr)
             .Replace("%VALID_REGS%", name_reg)
             .Replace("%VALID_SKIP%", vskip.ToString())
             .Replace("%OPT%", optstr)

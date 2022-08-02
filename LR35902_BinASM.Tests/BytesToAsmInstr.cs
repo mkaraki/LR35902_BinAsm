@@ -23,5 +23,29 @@ namespace LR35902_BinASM.Tests
                 Instruction = Instruction.NOP,
             }, e);
         }
+
+        [TestMethod]
+        public void STOP_NoBrank()
+        {
+            var e = GetAsmInstr(b(0x10, 0xFF), out int i);
+
+            Assert.AreEqual(1, i);
+            Assert.AreEqual(new AsmInstr()
+            {
+                Instruction = STOP,
+            }, e);
+        }
+
+        [TestMethod]
+        public void STOP_Brank()
+        {
+            var e = GetAsmInstr(b(0x10, 0x00), out int i);
+
+            Assert.AreEqual(2, i);
+            Assert.AreEqual(new AsmInstr()
+            {
+                Instruction = STOP,
+            }, e);
+        }
     }
 }

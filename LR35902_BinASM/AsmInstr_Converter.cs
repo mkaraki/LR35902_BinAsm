@@ -55,8 +55,9 @@ namespace LR35902_BinASM
                 // 0x10 STOP
                 if (opcode == 0x10)
                 {
-                    skip += 1;
-                    return new(STOP, instr[1]);
+                    if (instr.Length >= 2 && instr[1] == 0)
+                        skip += 1;
+                    return new(STOP);
                 }
 
                 // 0x20, 0x30, 0x28, 0x38 (JR)
@@ -110,7 +111,7 @@ namespace LR35902_BinASM
                             0 => B,
                             1 => D,
                             2 => H,
-                            3 => HL,
+                            3 => QHL,
                             _ => throw new NotImplementedException(),
                         },
                         instr[1]
@@ -146,7 +147,7 @@ namespace LR35902_BinASM
                 if (last4bit_opcode == 0x2)
                 {
                     return new(LD,
-                        Get16BitRegisterFrom2BitInstr(first4bit_opcode, QHLMinus, QHLPlus),
+                        Get16BitRegisterFrom2BitInstr(first4bit_opcode, QHLMinus, QHLPlus, true),
                         A);
                 }
                 // 0xA, LD A
@@ -154,7 +155,7 @@ namespace LR35902_BinASM
                 {
                     return new(LD,
                         A,
-                        Get16BitRegisterFrom2BitInstr(first4bit_opcode, QHLMinus, QHLPlus)
+                        Get16BitRegisterFrom2BitInstr(first4bit_opcode, QHLMinus, QHLPlus, true)
                         );
                 }
 
@@ -168,7 +169,7 @@ namespace LR35902_BinASM
                 if ((byte)(last4bit_opcode >> 1 << 6) >> 5 == 0b0100) // 0x4,5,c,d (INC, DEC)
                 {
                     return new(
-                        last4bit_opcode << 7 >> 7 == 0b1 ? DEC : INC, // If ends with 1, it's DEC
+                        (byte)(last4bit_opcode << 7) >> 7 == 0b1 ? DEC : INC, // If ends with 1, it's DEC
                         GetRegisterFromLast3Bits(opcode, 2, 5, QHL)
                         );
                 }
@@ -268,7 +269,6 @@ namespace LR35902_BinASM
                     // 0xC0 D0, RET NZ,NC
                     if (last4bit_opcode == 0)
                     {
-                        skip += 2;
                         return new(
                             RET,
                             ((byte)(first4bit_opcode << 6) >> 6 == 0) ? JC.NZ : JC.NC
@@ -278,7 +278,6 @@ namespace LR35902_BinASM
                     // 0xC8 D8, RET Z,C
                     if (last4bit_opcode == 0 || last4bit_opcode == 0x8)
                     {
-                        skip += 2;
                         return new(
                             RET,
                             ((byte)(first4bit_opcode << 6) >> 6 == 0) ? JC.Z : JC.C
@@ -359,12 +358,10 @@ namespace LR35902_BinASM
                 // 0xE2 F2, LD
                 if (opcode == 0xE2 || opcode == 0xF2)
                 {
-                    skip += 1;
-                    return new(
-                        LD,
-                        QC,
-                        instr[1],
-                        opcode == 0xE0);
+                    return new(LD, 
+                        opcode == 0xE2 ? QC : A,
+                        opcode == 0xE2 ? A : QC
+                        );
                 }
 
                 // 0xF3 DI
@@ -391,18 +388,18 @@ namespace LR35902_BinASM
                     skip += 1;
                     return new(((byte)(first4bit_opcode << 6) >> 6) switch
                     {
-                        1 => ADC,
-                        2 => SBC,
-                        3 => XOR,
-                        4 => CP,
+                        0 => ADC,
+                        1 => SBC,
+                        2 => XOR,
+                        3 => CP,
                         _ => throw new NotImplementedException()
                     },
-                        first4bit_opcode > 2 ? null : A,
+                        ((byte)(first4bit_opcode << 6) >> 6) < 2 ? A : null,
                         instr[1]
                         );
                 }
 
-                if (opcode == 0xD8)
+                if (opcode == 0xE8)
                 {
                     skip += 1;
                     return new(ADD, SP, instr[1]);
@@ -414,14 +411,14 @@ namespace LR35902_BinASM
                     return new(LD, HL, instr[1], addSP: true);
                 }
 
-                if (opcode == 0xD9)
-                    return new(JP, HL);
+                if (opcode == 0xE9)
+                    return new(JP, QHL);
 
                 if (opcode == 0xF9)
                     return new(LD, SP, HL);
             }
 
-            throw new NotImplementedException();
+            throw new NotImplementedException("Checked registerd all of opcodes, but not found.");
         }
 
         /// <summary>
@@ -446,13 +443,13 @@ namespace LR35902_BinASM
             };
         }
 
-        private static Register Get16BitRegisterFrom2BitInstr(byte opcode, Register last = SP, Register last2 = HL)
+        private static Register Get16BitRegisterFrom2BitInstr(byte opcode, Register last = SP, Register last2 = HL, bool makeq = false)
         {
             opcode = (byte)((byte)(opcode << 6) >> 6);
             return opcode switch
             {
-                0 => BC,
-                1 => DE,
+                0 => makeq ? QBC : BC,
+                1 => makeq ? QDE : DE,
                 2 => last2,
                 3 => last,
                 _ => throw new NotImplementedException(),
