@@ -105,10 +105,15 @@ namespace LR35902_BinASM
 
         private static string GetStringRegisterName(Register reg)
         {
-            return reg.ToString()
+            string work = reg.ToString()
                 .Replace("HLPlus", "HL+")
                 .Replace("HLMinus", "HL-")
                 ;
+
+            if (work.StartsWith('Q'))
+                work = $"({work.Substring(1)})";
+
+            return work;
         }
     }
 
@@ -169,18 +174,22 @@ namespace LR35902_BinASM
         F, // Flag
         B,
         C,
+        QC,
         D,
         E,
         H,
         L,
         BC,
+        QBC,
         DE,
+        QDE,
         HL,
+        QHL,
         SP, // Stack Pointer
         PC, // Program Counter
         AF,
-        HLPlus,
-        HLMinus
+        QHLPlus,
+        QHLMinus
     }
 
     public enum JumpCondition {

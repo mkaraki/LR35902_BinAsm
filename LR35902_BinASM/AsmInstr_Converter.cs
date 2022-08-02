@@ -146,7 +146,7 @@ namespace LR35902_BinASM
                 if (last4bit_opcode == 0x2)
                 {
                     return new(LD,
-                        Get16BitRegisterFrom2BitInstr(first4bit_opcode, HLMinus, HLPlus),
+                        Get16BitRegisterFrom2BitInstr(first4bit_opcode, QHLMinus, QHLPlus),
                         A);
                 }
                 // 0xA, LD A
@@ -154,7 +154,7 @@ namespace LR35902_BinASM
                 {
                     return new(LD,
                         A,
-                        Get16BitRegisterFrom2BitInstr(first4bit_opcode, HLMinus, HLPlus)
+                        Get16BitRegisterFrom2BitInstr(first4bit_opcode, QHLMinus, QHLPlus)
                         );
                 }
 
@@ -169,7 +169,7 @@ namespace LR35902_BinASM
                 {
                     return new(
                         last4bit_opcode << 7 >> 7 == 0b1 ? DEC : INC, // If ends with 1, it's DEC
-                        GetRegisterFromLast3Bits(opcode, 2, 5)
+                        GetRegisterFromLast3Bits(opcode, 2, 5, QHL)
                         );
                 }
 
@@ -362,7 +362,7 @@ namespace LR35902_BinASM
                     skip += 1;
                     return new(
                         LD,
-                        C,
+                        QC,
                         instr[1],
                         opcode == 0xE0);
                 }
@@ -430,7 +430,7 @@ namespace LR35902_BinASM
         /// 
         /// It also used in `0x40` ~ `0x7F` LD's destination calcurate.
         /// </summary>
-        internal static Register GetRegisterFromLast3Bits(byte opcode, int first_shift_amount = 5, int back_shift_amount = 5)
+        internal static Register GetRegisterFromLast3Bits(byte opcode, int first_shift_amount = 5, int back_shift_amount = 5, Register hl = QHL)
         {
             return ((byte)(opcode << first_shift_amount) >> back_shift_amount) switch
             {
@@ -440,7 +440,7 @@ namespace LR35902_BinASM
                 0x3 => E,
                 0x4 => H,
                 0x5 => L,
-                0x6 => HL,
+                0x6 => hl,
                 0x7 => A,
                 _ => throw new NotImplementedException(),
             };

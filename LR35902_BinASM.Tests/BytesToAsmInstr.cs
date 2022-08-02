@@ -1,3 +1,5 @@
+// Based on : https://github.com/lmmendes/game-boy-opcodes (MIT License)
+
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 using static LR35902_BinASM.AsmInstr;
@@ -7,7 +9,7 @@ using static LR35902_BinASM.Register;
 namespace LR35902_BinASM.Tests
 {
     [TestClass]
-    public class BytesToAsmInstr
+    public class BytesToAsmInstr_Hmn
     {
         private static byte[] b(params byte[] b) => b;
 

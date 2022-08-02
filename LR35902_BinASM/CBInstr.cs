@@ -20,7 +20,7 @@ namespace LR35902_BinASM
             if (instr.Length < 1) throw new ArgumentException("Instruction bytes must be larger than 1");
 
             // Default skip byte is 1 byte, 8bit.
-            skip = 1;
+            skip = 2;
 
             byte opcode = instr[0];
             byte last4bit_opcode = (byte)((byte)(opcode << 4) >> 4);
